@@ -1,14 +1,19 @@
-unsigned long key_db[] =  {0x566b7b91, 0x70e7cf96, 0xA4D29E83, 0xF15E0FCE};
-unsigned long key_enc[] = {0x463ADEAE, 0x9B47F686, 0x8A9C1D85, 0xF46B7EBF};
+#include <memory.h>
+#include <stdlib.h>
+#include <stdint.h>
 
-unsigned int swapu32(unsigned int n)
+uint32_t key_db[] =  {0x566b7b91, 0x70e7cf96, 0xA4D29E83, 0xF15E0FCE};
+uint32_t key_enc[] = {0x463ADEAE, 0x9B47F686, 0x8A9C1D85, 0xF46B7EBF};
+
+uint32_t swapu32(uint32_t n)
 {
     return(((n & 0xff000000) >> 24) | ((n & 0x000000ff) << 24) | ((n & 0x00ff0000) >> 8) | ((n & 0x0000ff00) << 8));
 }
-void crypt_qword(unsigned long *in, unsigned long *key, unsigned long *out,int encrypt = true)
+
+void crypt_qword(uint32_t *in, uint32_t *key, uint32_t *out,int encrypt = true)
 {
-    unsigned long code[4];
-    register unsigned long i = 16, j = encrypt?0:0xe3779B90, m, n;
+    uint32_t code[4];
+    register uint32_t i = 16, j = encrypt?0:0xe3779B90, m, n;
 
     m = swapu32(in[0]);
     n = swapu32(in[1]);
@@ -35,14 +40,14 @@ void crypt_qword(unsigned long *in, unsigned long *key, unsigned long *out,int e
     out[1] = swapu32(n);
 }
 
-int decrypt_msg(unsigned char *in, int inlen, unsigned long *key, unsigned char *out, unsigned long *outlen)
+uint32_t decrypt_msg(uint8_t *in, uint32_t inlen, uint32_t *key, uint8_t *out, uint32_t *outlen)
 {
-    unsigned char q[8], mkey[8], *q1, *q2, *outp;
+    uint8_t q[8], mkey[8], *q1, *q2, *outp;
     register int count, i, j, m, p;
 
     if (inlen % 8 || inlen < 16) return 0;
     /* get basic information of the packet */
-    crypt_qword((unsigned long *)in, key, (unsigned long *)q,false);
+    crypt_qword((uint32_t *)in, key, (uint32_t *)q,false);
     j = q[0] & 0x7;
     count = inlen - j - 10;
     if (*outlen < count || count < 0) return 0;
@@ -68,7 +73,7 @@ int decrypt_msg(unsigned char *in, int inlen, unsigned long *key, unsigned char 
                 if (i + j >= inlen) return 0;
                 q[j] ^= q1[j];
             }
-            crypt_qword((unsigned long *)q, key, (unsigned long *) q,false);
+            crypt_qword((uint32_t *)q, key, (uint32_t *) q,false);
             i += 8;
             q1 += 8;
             j = 0;
@@ -92,7 +97,7 @@ int decrypt_msg(unsigned char *in, int inlen, unsigned long *key, unsigned char 
                 if (i + j >= inlen) return 0;
                 q[j] ^= q1[j];
             }
-            crypt_qword((unsigned long *)q, key, (unsigned long *) q,false);
+            crypt_qword((uint32_t *)q, key, (uint32_t *) q,false);
             i += 8;
             q1 += 8;
             j = 0;
@@ -114,7 +119,7 @@ int decrypt_msg(unsigned char *in, int inlen, unsigned long *key, unsigned char 
                 if (i + j >= inlen) return 0;
                 q[j] ^= q1[j];
             }
-            crypt_qword((unsigned long *)q, key, (unsigned long *) q,false);
+            crypt_qword((uint32_t *)q, key, (uint32_t *) q,false);
             i += 8;
             q1 += 8;
             j = 0;
@@ -124,11 +129,11 @@ int decrypt_msg(unsigned char *in, int inlen, unsigned long *key, unsigned char 
 }
 
 
-void encrypt_msg(unsigned char *in, int inlen, unsigned long *key, unsigned char *out, unsigned long *outlen)
+void encrypt_msg(uint8_t *in, int inlen, uint32_t *key, uint8_t *out, uint32_t *outlen)
 {
     register int m, i, j, count, p = 1;
-    unsigned char q[12], *q1, *q2, *inp;
-    unsigned char mkey[8];
+    uint8_t q[12], *q1, *q2, *inp;
+    uint8_t mkey[8];
 
     m = (inlen + 10) % 8;
 
@@ -154,7 +159,7 @@ void encrypt_msg(unsigned char *in, int inlen, unsigned long *key, unsigned char
         {
             for (i = 0; i < 8; i ++)
                 q[i] ^= mkey[i];
-            crypt_qword((unsigned long *)q, key, (unsigned long *)out);
+            crypt_qword((uint32_t *)q, key, (uint32_t *)out);
             for (i = 0; i < 8; i ++)
                 q1[i] ^= mkey[i];
             q2 = q1;
@@ -182,7 +187,7 @@ void encrypt_msg(unsigned char *in, int inlen, unsigned long *key, unsigned char
                 else q[i] ^= q2[i];
             }
             j = 0;
-            crypt_qword((unsigned long *)q, key, (unsigned long *)q1);
+            crypt_qword((uint32_t *)q, key, (uint32_t *)q1);
             for (i = 0; i < 8; i ++)
                 q1[i] ^= mkey[i];
             count += 8;
@@ -205,7 +210,7 @@ void encrypt_msg(unsigned char *in, int inlen, unsigned long *key, unsigned char
         {
             for (i = 0; i < 8; i ++)
                 q[i] ^= q2[i];
-            crypt_qword((unsigned long *)q, key, (unsigned long *)q1);
+            crypt_qword((uint32_t *)q, key, (uint32_t *)q1);
             for (i = 0; i < 8; i ++)
                 q1[i] ^= mkey[i];
             memcpy(mkey, q, 8);
